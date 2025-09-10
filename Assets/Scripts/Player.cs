@@ -15,6 +15,7 @@ public class Player : MonoBehaviour
     public float health = 100f;
     private Slider healthBar;
     private SpriteRenderer spriteRenderer;
+    Color originalColor;
     void Awake()
     {
         inputActions = new InputSystem_Actions();
@@ -35,6 +36,7 @@ public class Player : MonoBehaviour
         healthBar.maxValue = health;
         healthBar.value = health;
         spriteRenderer = transform.Find("Sprite").GetComponent<SpriteRenderer>();
+        originalColor = spriteRenderer.color;
 
     }
 
@@ -75,7 +77,6 @@ public class Player : MonoBehaviour
 
     IEnumerator FlashRed()
     {
-        Color originalColor = spriteRenderer.color;
         spriteRenderer.color = Color.red;
         yield return new WaitForSeconds(0.05f);
         spriteRenderer.color = originalColor;
