@@ -21,6 +21,7 @@ public class Enemy : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        waypoints[0] = GameObject.Find("Player");
         target = waypoints[0].transform;
         agent = GetComponent<NavMeshAgent>();
         healthBar = transform.Find("EnemyHealthBar/HealthBar").gameObject;
@@ -38,16 +39,18 @@ public class Enemy : MonoBehaviour
 
             agent.SetDestination(target.position);
 
-        }
-
-        if (Vector3.Distance(transform.position, target.position) < reachDistance)
-        {
-            if (!isAttacking)
+            if (Vector3.Distance(transform.position, target.position) < reachDistance)
             {
-                StartCoroutine(CloseAttack());
+                if (!isAttacking)
+                {
+                    StartCoroutine(CloseAttack());
+                }
+
             }
 
         }
+
+
         else if (isAttacking)
         {
             isAttacking = false;
