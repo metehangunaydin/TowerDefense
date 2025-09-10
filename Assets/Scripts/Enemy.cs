@@ -6,8 +6,8 @@ public class Enemy : MonoBehaviour
 
     Transform target;
     public GameObject[] waypoints;
-    public float speed = 2f;
-    public float reachDistance = 1f;
+    //public float speed = 2f;
+    //public float reachDistance = 1f;
     private NavMeshAgent agent;
     public float health = 100f;
     private GameObject healthBar;
@@ -16,6 +16,8 @@ public class Enemy : MonoBehaviour
     private bool isAttacking = false;
     private float maxHealth = 100f;
     private SpriteRenderer spriteRenderer;
+    Color originalColor;
+    private Coroutine attackRoutine;
 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -27,6 +29,7 @@ public class Enemy : MonoBehaviour
         healthBar = transform.Find("EnemyHealthBar/HealthBar").gameObject;
         maxHealth = health;
         spriteRenderer = transform.Find("Sprite").GetComponent<SpriteRenderer>();
+        originalColor = spriteRenderer.color;
     }
 
     // Update is called once per frame
@@ -39,23 +42,23 @@ public class Enemy : MonoBehaviour
 
             agent.SetDestination(target.position);
 
-            if (Vector3.Distance(transform.position, target.position) < reachDistance)
+            if (Vector3.Distance(transform.position, target.position) < agent.stoppingDistance)
             {
                 if (!isAttacking)
                 {
-                    StartCoroutine(CloseAttack());
+                    attackRoutine = StartCoroutine(CloseAttack());
                 }
 
             }
+            else if (isAttacking)
+            {
+                isAttacking = false;
+                StopCoroutine(attackRoutine);
+                spriteRenderer.color = originalColor;
+            }
 
         }
-
-
-        else if (isAttacking)
-        {
-            isAttacking = false;
-            StopAllCoroutines();
-        }
+ 
     }
 
     public void TakeDamage(float damage)
@@ -94,10 +97,11 @@ public class Enemy : MonoBehaviour
 
         }
         isAttacking = false;
+        
     }     
     IEnumerator FlashRed()
     {
-        Color originalColor = spriteRenderer.color;
+        
         spriteRenderer.color = Color.red;
         yield return new WaitForSeconds(0.05f);
         spriteRenderer.color = originalColor;
