@@ -12,12 +12,27 @@ public class Enemy : MonoBehaviour
     public float health = 100f;
     private GameObject healthBar;
     public float damage = 10f;
-    public float attackCooldown = 1f;
-    private bool isAttacking = false;
     private float maxHealth = 100f;
     private SpriteRenderer spriteRenderer;
     Color originalColor;
     private Coroutine attackRoutine;
+    private Animator animator;
+    private State currentState = State.Idle;
+    public float attackDelay = 0.3f;
+    public float attackCooldown = 1f;
+    bool targetInAttackRange = false;
+    float attackAnimationDuration;
+    bool canChangeState = true;
+
+    enum State
+    {
+        Idle,
+        Moving,
+        Attacking,
+        TakingDamage,
+        Dead
+    }
+
 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -30,6 +45,18 @@ public class Enemy : MonoBehaviour
         maxHealth = health;
         spriteRenderer = transform.Find("Sprite").GetComponent<SpriteRenderer>();
         originalColor = spriteRenderer.color;
+        animator = transform.Find("Sprite").GetComponent<Animator>();
+
+        AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
+        foreach (var clip in clips)
+        {
+            if (clip.name == "Attack")
+            {
+                attackAnimationDuration = clip.length;
+                break;
+            }
+        }
+        
     }
 
     // Update is called once per frame
@@ -40,25 +67,41 @@ public class Enemy : MonoBehaviour
             // Move towards the target waypoint
             //transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
 
-            agent.SetDestination(target.position);
-
-            if (Vector3.Distance(transform.position, target.position) < agent.stoppingDistance)
+            if(canChangeState)
             {
-                if (!isAttacking)
+                agent.SetDestination(target.position);
+            }
+
+            //hareket ediyorsa state moving e geç
+            if (agent.velocity.magnitude > 0.01f)
+            {
+                StartCoroutine(ChangeState(State.Moving));
+                UpdateDirection();
+            }
+            else
+            {
+                StartCoroutine(ChangeState(State.Idle));
+            }
+
+            if (Vector3.Distance(transform.position, target.position) < agent.stoppingDistance) // Eğer hedef menzil içindeyse saldırı başlat
+            {
+                targetInAttackRange = true;
+                if (currentState != State.Attacking)
                 {
                     attackRoutine = StartCoroutine(CloseAttack());
                 }
 
             }
-            else if (isAttacking)
+            else if (currentState == State.Attacking) // Eğer saldırı durumundaysa ve menzil dışına çıktıysa saldırıyı durdur
             {
-                isAttacking = false;
+                targetInAttackRange = false;
+                currentState = State.Idle;
                 StopCoroutine(attackRoutine);
                 spriteRenderer.color = originalColor;
             }
 
         }
- 
+
     }
 
     public void TakeDamage(float damage)
@@ -85,8 +128,11 @@ public class Enemy : MonoBehaviour
 
     IEnumerator CloseAttack()
     {
-        isAttacking = true;
-        yield return new WaitForSeconds(attackCooldown);
+        if (currentState == State.Attacking) yield break;
+        StartCoroutine(ChangeState(State.Attacking));
+        yield return new WaitForSeconds(attackDelay); // Saldırının gerçekleşme yani oyuncuya hasar verme süresi
+        if (!targetInAttackRange) yield break; // Eğer hedef saldırı menzilinde değilse çık
+        // Burada oyuncuya hasar verme işlemi yapılacak
         if (target != null)
         {
             Player player = target.GetComponent<Player>();
@@ -96,15 +142,48 @@ public class Enemy : MonoBehaviour
             }
 
         }
-        isAttacking = false;
-        
-    }     
+
+
+    }
     IEnumerator FlashRed()
     {
-        
+
         spriteRenderer.color = Color.red;
         yield return new WaitForSeconds(0.05f);
         spriteRenderer.color = originalColor;
+    }
+
+    void SetState(State state)
+    {
+        animator.SetInteger("State", (int)state);
+        currentState = state;
+
+    }
+    IEnumerator ChangeState(State newState)
+    {
+        if (!canChangeState) yield break;
+        if (currentState == newState) yield break;
+        if (currentState == State.Dead) yield break;
+        if (currentState == State.Attacking) yield break;
+        if (currentState == State.TakingDamage) yield break;
+        if (newState == State.Attacking)
+        {
+            SetState(State.Attacking);
+            canChangeState = false;
+            yield return new WaitForSeconds(attackAnimationDuration);
+            SetState(State.Idle);
+            yield return new WaitForSeconds(attackCooldown);
+            canChangeState = true;
+        }
+        else
+        {
+            SetState(newState);
+        }
+    }
+
+    void UpdateDirection()
+    {
+        spriteRenderer.flipX = agent.velocity.x < 0;    
     }
         
     
