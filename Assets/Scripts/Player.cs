@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Player : MonoBehaviour
 {
@@ -10,7 +11,7 @@ public class Player : MonoBehaviour
     Vector2 moveInput;
     public GameObject projectilePrefab;
     public Transform firePoint;
-    Vector3 direction = Vector3.right; // Default direction
+    Vector3 direction = Vector3.right;
     private Slider healthBar;
     private SpriteRenderer spriteRenderer;
     Color originalColor;
@@ -18,23 +19,29 @@ public class Player : MonoBehaviour
     Animator animator;
     State currentState = State.Idle;
     bool canMove = true;
+    public bool attack1CanHit = false;
+    public List<GameObject> targets;
     [Header("Character Configs")]
     public float attack1Duration = 0.5f;
+    public float attack2Duration = 0.5f;
     public float takingDamageDuration = 0.3f;
     public float iframeDuration = 1f;
     public int blinkRate = 5;
     [Header("Character Stats")]
     public float health = 100f;
     public float speed = 5f;
+    public float closeAttackDamage = 20f;
+    public float rangedAttackDamage = 10f;
 
-    
+
 
     // Karakter durumları
     enum State
     {
         Idle,
         Moving,
-        Attacking,
+        Attacking_1,
+        Attacking_2,
         TakingDamage,
         Dead
     }
@@ -47,7 +54,7 @@ public class Player : MonoBehaviour
         inputActions.Enable();
         inputActions.Player.Move.performed += Move;
         inputActions.Player.Move.canceled += MoveCanceled;
-        inputActions.Player.Attack.performed += Attack;
+        inputActions.Player.Attack.performed += Attack_1;
 
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -60,12 +67,14 @@ public class Player : MonoBehaviour
         spriteRenderer = transform.Find("Sprite").GetComponent<SpriteRenderer>();
         originalColor = spriteRenderer.color;
         animator = transform.Find("Sprite").GetComponent<Animator>();
+        targets = new List<GameObject>();
 
     }
 
     // Update is called once per frame
     void Update()
     {
+
         if (canMove)
         {
             Vector3 movement = new Vector3(moveInput.x, 0, moveInput.y) * speed * Time.deltaTime;
@@ -86,16 +95,28 @@ public class Player : MonoBehaviour
         {
             StartCoroutine(ChangeState(State.Idle));
         }
+        if (targets.Count > 0)
+        {
+            Attack_1();    
+        }
     }
     //Karakter saldırı fonksiyonu
-    void Attack(InputAction.CallbackContext context)
+    public void Attack_1()
     {
-        if(currentState == State.Attacking) return;
-        StartCoroutine(ChangeState(State.Attacking));
-        Debug.Log("Attack!");
-        GameObject projectile = Instantiate(projectilePrefab, firePoint.position, Quaternion.LookRotation(direction, Vector3.up));
-
+        if (currentState == State.Attacking_1) return;
+        StartCoroutine(ChangeState(State.Attacking_1));
+        Debug.Log("Attack 1!");
     }
+    void Attack_1(InputAction.CallbackContext context)
+    {
+        Attack_1();
+    }
+    public void Attack_2()
+    {
+        if (currentState == State.Attacking_2) return;
+        StartCoroutine(ChangeState(State.Attacking_2));
+    }
+
     //Karakter hareketi için InputAction'daki okunan değeri moveInput değişkenine atar
     void Move(InputAction.CallbackContext context)
     {
@@ -107,7 +128,7 @@ public class Player : MonoBehaviour
     {
         moveInput = Vector2.zero;
     }
-    
+
     //Karakter hasar alma fonksiyonu
     public void TakeDamage(float damage)
     {
@@ -160,14 +181,37 @@ public class Player : MonoBehaviour
     //Karakterin durumunu değiştiren fonksiyon
     IEnumerator ChangeState(State newState)
     {
+        Debug.Log($"state: {currentState}");
         if (currentState == newState) yield break;
         if (currentState == State.Dead) yield break;
-        if (currentState == State.Attacking) yield break;
+        if (currentState == State.Attacking_1) yield break;
+        if (currentState == State.Attacking_2) yield break;
         if (currentState == State.TakingDamage) yield break;
-        if (newState == State.Attacking)
+        if (newState == State.Attacking_1)
         {
-            SetState(State.Attacking);
+            SetState(State.Attacking_1);
+            yield return new WaitForSeconds(attack1Duration/2f);
+            if (targets.Count > 0)
+            {
+                targets.RemoveAll(t => t == null);
+
+                foreach (var target in targets)
+                {
+                    if (target != null)
+                    {
+                        target.GetComponent<Enemy>()?.TakeDamage(closeAttackDamage);
+                    }
+                }
+            }
             yield return new WaitForSeconds(attack1Duration);
+            SetState(State.Idle);
+        }
+        else if (newState == State.Attacking_2)
+        {
+            SetState(State.Attacking_2);
+            GameObject projectile = Instantiate(projectilePrefab, firePoint.position, Quaternion.LookRotation(direction, Vector3.up));
+            rangedAttackDamage = projectile.GetComponent<Projectile>().damage;
+            yield return new WaitForSeconds(attack2Duration);
             SetState(State.Idle);
         }
         else if (newState == State.TakingDamage)
@@ -189,7 +233,7 @@ public class Player : MonoBehaviour
     {
         animator.SetInteger("State", (int)state);
         currentState = state;
-        if(state == State.Attacking || state == State.TakingDamage)
+        if (state == State.TakingDamage) //state == State.Attacking || 
         {
             canMove = false;
         }
@@ -199,5 +243,6 @@ public class Player : MonoBehaviour
         }
 
     }
-    
+
+
 }

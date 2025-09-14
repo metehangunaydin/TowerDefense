@@ -31,6 +31,10 @@ public class WaveManager : MonoBehaviour
         {
             StartCoroutine(GenerateWave(waveLevel));
         }
+        if(Input.GetKeyDown(KeyCode.G))
+        {
+            StartCoroutine(GenerateWave(waveLevel));
+        }
     }
 
     IEnumerator GenerateWave(int level)
