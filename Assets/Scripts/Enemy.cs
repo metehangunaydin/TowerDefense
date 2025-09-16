@@ -23,6 +23,7 @@ public class Enemy : MonoBehaviour
     bool targetInAttackRange = false;
     float attackAnimationDuration;
     bool canChangeState = true;
+    public Color strengthColor = Color.white;
 
     enum State
     {
@@ -33,11 +34,22 @@ public class Enemy : MonoBehaviour
         Dead
     }
 
+    public enum EnemyDifficulty
+    {
+        Easy,
+        Medium,
+        Hard
+    }
+
+    public EnemyDifficulty difficulty = EnemyDifficulty.Easy;
+
 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        SetStatsByDifficulty();
+
         waypoints[0] = GameObject.Find("Player");
         target = waypoints[0].transform;
         agent = GetComponent<NavMeshAgent>();
@@ -59,10 +71,45 @@ public class Enemy : MonoBehaviour
         
     }
 
+    void SetStatsByDifficulty()
+    {
+        switch (difficulty)
+        {
+            case EnemyDifficulty.Easy:
+                health = 50f;
+                damage = 5f;
+                strengthColor = Color.green;
+                break;
+            case EnemyDifficulty.Medium:
+                health = 100f;
+                damage = 10f;
+                strengthColor = Color.yellow;
+                break;
+            case EnemyDifficulty.Hard:
+                health = 200f;
+                damage = 20f;
+                strengthColor = Color.red;
+                break;
+        }
+        // Sprite'ın rengini ayarla
+        if (spriteRenderer == null)
+            spriteRenderer = transform.Find("Sprite").GetComponent<SpriteRenderer>();
+        spriteRenderer.color = strengthColor;
+        originalColor = strengthColor;
+    }
+
     // Update is called once per frame
     void Update()
     {
-        if (target != null)
+        if(target.GetComponent<Player>()?.currentState == Player.State.Dead)
+        {
+            canChangeState = true;
+            StopAllCoroutines();
+            agent.ResetPath();
+            SetState(State.Idle);
+            spriteRenderer.color = originalColor;
+        }
+        else if (target != null && currentState != State.Dead)
         {
             // Move towards the target waypoint
             //transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.deltaTime);

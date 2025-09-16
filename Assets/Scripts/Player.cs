@@ -17,10 +17,11 @@ public class Player : MonoBehaviour
     Color originalColor;
     bool iframeIsActive = false;
     Animator animator;
-    State currentState = State.Idle;
+    public State currentState = State.Idle;
     bool canMove = true;
-    public bool attack1CanHit = false;
+    //public bool attack1CanHit = false;
     public List<GameObject> targets;
+    public GameObject deadUI;
     [Header("Character Configs")]
     public float attack1Duration = 0.5f;
     public float attack2Duration = 0.5f;
@@ -29,14 +30,16 @@ public class Player : MonoBehaviour
     public int blinkRate = 5;
     [Header("Character Stats")]
     public float health = 100f;
+    private float maxHealth = 100f;
     public float speed = 5f;
     public float closeAttackDamage = 20f;
     public float rangedAttackDamage = 10f;
 
 
 
+
     // Karakter durumları
-    enum State
+    public enum State
     {
         Idle,
         Moving,
@@ -62,19 +65,21 @@ public class Player : MonoBehaviour
     {
         inputActions = new InputSystem_Actions();
         healthBar = GameObject.Find("Canvas/PlayerHealth").GetComponent<Slider>();
-        healthBar.maxValue = health;
+        healthBar.maxValue = maxHealth;
+        health = maxHealth;
         healthBar.value = health;
         spriteRenderer = transform.Find("Sprite").GetComponent<SpriteRenderer>();
         originalColor = spriteRenderer.color;
         animator = transform.Find("Sprite").GetComponent<Animator>();
         targets = new List<GameObject>();
+        
+        //deadUI = GameObject.Find("Canvas/DeadUI");
 
     }
 
     // Update is called once per frame
     void Update()
     {
-
         if (canMove)
         {
             Vector3 movement = new Vector3(moveInput.x, 0, moveInput.y) * speed * Time.deltaTime;
@@ -147,6 +152,11 @@ public class Player : MonoBehaviour
     void Die()
     {
         Debug.Log("Player Died!");
+        StopAllCoroutines();
+        health = 0;
+        healthBar.value = health;
+        StartCoroutine(ChangeState(State.Dead));
+        deadUI.SetActive(true);
     }
 
     //Karakter hasar aldığında kısa süreliğine kırmızı yanıp sönme efekti
@@ -184,9 +194,12 @@ public class Player : MonoBehaviour
         Debug.Log($"state: {currentState}");
         if (currentState == newState) yield break;
         if (currentState == State.Dead) yield break;
-        if (currentState == State.Attacking_1) yield break;
-        if (currentState == State.Attacking_2) yield break;
-        if (currentState == State.TakingDamage) yield break;
+        if(newState != State.Dead) //eğer yeni durum ölüm değilse aşağıdaki durumlarda durum değişikliği yapma
+        {
+            if (currentState == State.Attacking_1) yield break;
+            if (currentState == State.Attacking_2) yield break;
+            if (currentState == State.TakingDamage) yield break;
+        }
         if (newState == State.Attacking_1)
         {
             SetState(State.Attacking_1);
@@ -233,7 +246,8 @@ public class Player : MonoBehaviour
     {
         animator.SetInteger("State", (int)state);
         currentState = state;
-        if (state == State.TakingDamage) //state == State.Attacking || 
+        Debug.Log($"New State: {state}");
+        if (state == State.TakingDamage || state == State.Dead) //state == State.Attacking || 
         {
             canMove = false;
         }
@@ -242,6 +256,19 @@ public class Player : MonoBehaviour
             canMove = true;
         }
 
+    }
+
+    public void Respawn()
+    {
+        health = maxHealth;
+        healthBar.value = health;
+        spriteRenderer.color = originalColor;
+        //StartCoroutine(ChangeState(State.Idle));
+        SetState(State.Idle);
+        StartCoroutine(ActivateIFrames());
+        deadUI.SetActive(false);
+        GameObject.Find("WaveManager").GetComponent<WaveManager>().Restart();
+        
     }
 
 
