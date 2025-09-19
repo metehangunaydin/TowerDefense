@@ -22,6 +22,8 @@ public class Player : MonoBehaviour
     //public bool attack1CanHit = false;
     public List<GameObject> targets;
     public GameObject deadUI;
+    public AudioSource attack1Sound;
+    public AudioSource attack2Sound;
     [Header("Character Configs")]
     public float attack1Duration = 0.5f;
     public float attack2Duration = 0.5f;
@@ -34,6 +36,7 @@ public class Player : MonoBehaviour
     public float speed = 5f;
     public float closeAttackDamage = 20f;
     public float rangedAttackDamage = 10f;
+
 
 
 
@@ -57,13 +60,13 @@ public class Player : MonoBehaviour
         inputActions.Enable();
         inputActions.Player.Move.performed += Move;
         inputActions.Player.Move.canceled += MoveCanceled;
-        inputActions.Player.Attack.performed += Attack_1;
+        inputActions.Player.Attack1.performed += Attack_1;
+        inputActions.Player.Attack2.performed += Attack_2;
 
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        inputActions = new InputSystem_Actions();
         healthBar = GameObject.Find("Canvas/PlayerHealth").GetComponent<Slider>();
         healthBar.maxValue = maxHealth;
         health = maxHealth;
@@ -72,7 +75,9 @@ public class Player : MonoBehaviour
         originalColor = spriteRenderer.color;
         animator = transform.Find("Sprite").GetComponent<Animator>();
         targets = new List<GameObject>();
-        
+        attack1Sound = transform.Find("AudioSources/Attack1_sound").GetComponent<AudioSource>();
+        attack2Sound = transform.Find("AudioSources/Attack2_sound").GetComponent<AudioSource>();
+
         //deadUI = GameObject.Find("Canvas/DeadUI");
 
     }
@@ -120,6 +125,10 @@ public class Player : MonoBehaviour
     {
         if (currentState == State.Attacking_2) return;
         StartCoroutine(ChangeState(State.Attacking_2));
+    }
+    public void Attack_2(InputAction.CallbackContext context)
+    {
+        Attack_2();
     }
 
     //Karakter hareketi için InputAction'daki okunan değeri moveInput değişkenine atar
@@ -203,7 +212,11 @@ public class Player : MonoBehaviour
         if (newState == State.Attacking_1)
         {
             SetState(State.Attacking_1);
-            yield return new WaitForSeconds(attack1Duration/2f);
+            if (attack1Sound != null)
+            {
+                attack1Sound.Play();
+            }
+            yield return new WaitForSeconds(attack1Duration / 2f);
             if (targets.Count > 0)
             {
                 targets.RemoveAll(t => t == null);
@@ -222,6 +235,10 @@ public class Player : MonoBehaviour
         else if (newState == State.Attacking_2)
         {
             SetState(State.Attacking_2);
+            if (attack2Sound != null)
+            {
+                attack2Sound.Play();
+            }
             GameObject projectile = Instantiate(projectilePrefab, firePoint.position, Quaternion.LookRotation(direction, Vector3.up));
             rangedAttackDamage = projectile.GetComponent<Projectile>().damage;
             yield return new WaitForSeconds(attack2Duration);

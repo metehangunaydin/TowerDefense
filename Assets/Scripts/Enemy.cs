@@ -24,6 +24,7 @@ public class Enemy : MonoBehaviour
     float attackAnimationDuration;
     bool canChangeState = true;
     public Color strengthColor = Color.white;
+    public AudioSource goblinLaughSound;
 
     enum State
     {
@@ -48,7 +49,7 @@ public class Enemy : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        SetStatsByDifficulty();
+
 
         waypoints[0] = GameObject.Find("Player");
         target = waypoints[0].transform;
@@ -56,6 +57,7 @@ public class Enemy : MonoBehaviour
         healthBar = transform.Find("EnemyHealthBar/HealthBar").gameObject;
         maxHealth = health;
         spriteRenderer = transform.Find("Sprite").GetComponent<SpriteRenderer>();
+
         originalColor = spriteRenderer.color;
         animator = transform.Find("Sprite").GetComponent<Animator>();
 
@@ -68,40 +70,54 @@ public class Enemy : MonoBehaviour
                 break;
             }
         }
-        
+        goblinLaughSound = transform.Find("AudioSources/goblin_laugh")?.GetComponent<AudioSource>();
+
+        SetStatsByDifficulty();
+        StartCoroutine(PlayGoblinLaugh());
+
     }
 
     void SetStatsByDifficulty()
     {
+        if (target == null || agent == null) return;
         switch (difficulty)
         {
             case EnemyDifficulty.Easy:
                 health = 50f;
+                maxHealth = health;
                 damage = 5f;
+                agent.speed = 2.7f;
                 strengthColor = Color.green;
                 break;
             case EnemyDifficulty.Medium:
                 health = 100f;
+                maxHealth = health;
                 damage = 10f;
+                agent.speed = 2.3f;
                 strengthColor = Color.yellow;
                 break;
             case EnemyDifficulty.Hard:
                 health = 200f;
+                maxHealth = health;
                 damage = 20f;
+                agent.speed = 2f;
                 strengthColor = Color.red;
                 break;
         }
         // Sprite'ın rengini ayarla
-        if (spriteRenderer == null)
-            spriteRenderer = transform.Find("Sprite").GetComponent<SpriteRenderer>();
-        spriteRenderer.color = strengthColor;
-        originalColor = strengthColor;
+        //SpriteRenderer spriteRenderer2 = transform.Find("Sprite")?.GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = strengthColor;
+            originalColor = strengthColor;
+        }
+        
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(target.GetComponent<Player>()?.currentState == Player.State.Dead)
+        if (target != null && target.GetComponent<Player>()?.currentState == Player.State.Dead)
         {
             canChangeState = true;
             StopAllCoroutines();
@@ -114,7 +130,7 @@ public class Enemy : MonoBehaviour
             // Move towards the target waypoint
             //transform.position = Vector3.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
 
-            if(canChangeState)
+            if (canChangeState)
             {
                 agent.SetDestination(target.position);
             }
@@ -148,7 +164,6 @@ public class Enemy : MonoBehaviour
             }
 
         }
-
     }
 
     public void TakeDamage(float damage)
@@ -168,6 +183,7 @@ public class Enemy : MonoBehaviour
     }
     void Die()
     {
+        StopAllCoroutines();
         Destroy(gameObject);
     }
 
@@ -230,7 +246,17 @@ public class Enemy : MonoBehaviour
 
     void UpdateDirection()
     {
-        spriteRenderer.flipX = agent.velocity.x < 0;    
+        spriteRenderer.flipX = agent.velocity.x < 0;
+    }
+
+    IEnumerator PlayGoblinLaugh()
+    {
+        
+        float waitTime = Random.Range(5f, 15f);
+        yield return new WaitForSeconds(waitTime);
+        if(this == null || gameObject == null || goblinLaughSound == null) yield break;
+        goblinLaughSound.Play();
+        StartCoroutine(PlayGoblinLaugh());
     }
         
     
