@@ -22,6 +22,7 @@ public class WaveManager : MonoBehaviour
     public Material yellowMaterial;
     public Material greenMaterial;
     private GameObject enemiesParent;
+    private Player player;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -31,13 +32,15 @@ public class WaveManager : MonoBehaviour
         enemyPrefabsGroups[2] = enemyPrefabs_lv3;
         UpdateWaveInfoText();
         enemiesParent = new GameObject("Enemies");
+        player = FindObjectOfType<Player>();
 
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (!waveInProgress)
+        if (player.currentState == Player.State.Dead) return;
+        if (!waveInProgress && player != null)
         {
             StartCoroutine(GenerateWave(waveLevel));
         }
@@ -82,6 +85,7 @@ public class WaveManager : MonoBehaviour
 
     public void Restart()
     {
+        StopAllCoroutines();
         waveLevel = 1;
         waveNumber = 0;
         waveInProgress = false;
