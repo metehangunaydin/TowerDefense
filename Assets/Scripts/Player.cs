@@ -115,7 +115,6 @@ public class Player : MonoBehaviour
     {
         if (currentState == State.Attacking_1) return;
         StartCoroutine(ChangeState(State.Attacking_1));
-        Debug.Log("Attack 1!");
     }
     void Attack_1(InputAction.CallbackContext context)
     {
@@ -200,7 +199,6 @@ public class Player : MonoBehaviour
     //Karakterin durumunu değiştiren fonksiyon
     IEnumerator ChangeState(State newState)
     {
-        Debug.Log($"state: {currentState}");
         if (currentState == newState) yield break;
         if (currentState == State.Dead) yield break;
         if(newState != State.Dead) //eğer yeni durum ölüm değilse aşağıdaki durumlarda durum değişikliği yapma
@@ -255,6 +253,7 @@ public class Player : MonoBehaviour
             SetState(newState);
         }
 
+        //Debug.Log($"state: {currentState}");
 
     }
 
@@ -285,7 +284,6 @@ public class Player : MonoBehaviour
         StartCoroutine(ActivateIFrames());
         deadUI.SetActive(false);
         GameObject.Find("WaveManager").GetComponent<WaveManager>().Restart();
-        
     }
 
 

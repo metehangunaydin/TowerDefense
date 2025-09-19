@@ -23,6 +23,7 @@ public class WaveManager : MonoBehaviour
     public Material greenMaterial;
     private GameObject enemiesParent;
     private Player player;
+    private Coroutine waveCoroutine;
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
@@ -32,7 +33,12 @@ public class WaveManager : MonoBehaviour
         enemyPrefabsGroups[2] = enemyPrefabs_lv3;
         UpdateWaveInfoText();
         enemiesParent = new GameObject("Enemies");
-        player = FindObjectOfType<Player>();
+        player = GameObject.FindWithTag("Player").GetComponent<Player>();
+
+        if (player != null)
+        {
+            waveCoroutine = StartCoroutine(GenerateWave(waveLevel));
+        }
 
     }
 
@@ -40,41 +46,44 @@ public class WaveManager : MonoBehaviour
     void Update()
     {
         if (player.currentState == Player.State.Dead) return;
-        if (!waveInProgress && player != null)
-        {
-            StartCoroutine(GenerateWave(waveLevel));
-        }
         if(Input.GetKeyDown(KeyCode.G))
         {
-            StartCoroutine(GenerateWave(waveLevel));
+            GenerateWave_(waveLevel);
         }
         UpdateWaveInfoText();
     }
 
+
     IEnumerator GenerateWave(int level)
     {
+        while (true)
+        {
+            GenerateWave_(level);
+            //UpdateWaveInfoText();
+            yield return new WaitForSeconds(waveCooldown);
+        }
+
+    }
+
+
+    void GenerateWave_(int level)
+    {
         waveNumber++;
-        waveInProgress = true;
         Debug.Log($"Starting Wave {waveNumber} at Level {level}");
         for (int i = 0; i < enemiesPerWave; i++)
         {
-            GameObject enemyPrefab = enemyPrefabsGroups[level-1][Random.Range(0, enemyPrefabsGroups[level-1].Length)];
+            GameObject enemyPrefab = enemyPrefabsGroups[level - 1][Random.Range(0, enemyPrefabsGroups[level - 1].Length)];
             Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
             GameObject enemy = Instantiate(enemyPrefab, spawnPoint.position, spawnPoint.rotation);
-            enemy.GetComponent<Enemy>().difficulty = (Enemy.EnemyDifficulty)(waveLevel-1);
+            enemy.GetComponent<Enemy>().difficulty = (Enemy.EnemyDifficulty)(waveLevel - 1);
             enemy.transform.Find("EnemyHealthBar/HealthBar").GetComponent<MeshRenderer>().material = level == 1 ? greenMaterial : level == 2 ? yellowMaterial : redMaterial;
             enemy.transform.parent = enemiesParent.transform;
-            yield return new WaitForSeconds(0.15f);
         }
-        if(waveNumber % levelUpEveryNWaves == 0 && waveLevel < 3)
+        if (waveNumber % levelUpEveryNWaves == 0 && waveLevel < 3)
         {
             waveLevel++;
             Debug.Log("Wave Level Up! New Wave Level: " + waveLevel);
         }
-        //UpdateWaveInfoText();
-        yield return new WaitForSeconds(waveCooldown);
-        waveInProgress = false;
-
     }
 
 
@@ -88,10 +97,10 @@ public class WaveManager : MonoBehaviour
         StopAllCoroutines();
         waveLevel = 1;
         waveNumber = 0;
-        waveInProgress = false;
         UpdateWaveInfoText();
         Destroy(enemiesParent);
         enemiesParent = new GameObject("Enemies");
+        waveCoroutine = StartCoroutine(GenerateWave(waveLevel));
     }
 
 }
